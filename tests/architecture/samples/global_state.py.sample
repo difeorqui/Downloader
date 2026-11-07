@@ -1,0 +1,11 @@
+"""Muestra T-02: el dominio no puede tener estado global mutable (AP-05)."""
+
+_CACHE = {}
+_SEEN: list[str] = []
+_COUNTER = 0
+
+
+def remember(value: str) -> None:
+    global _COUNTER
+    _COUNTER += 1
+    _SEEN.append(value)

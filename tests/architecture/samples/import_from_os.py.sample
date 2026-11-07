@@ -1,0 +1,7 @@
+"""Muestra T-02: el dominio no puede importar os (PA-01). NO es codigo de la aplicacion."""
+
+from os import path
+
+
+def join(a: str, b: str) -> str:
+    return path.join(a, b)

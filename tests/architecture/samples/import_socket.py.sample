@@ -1,0 +1,7 @@
+"""Muestra T-02: el dominio no puede importar socket (PA-01). NO es codigo de la aplicacion."""
+
+import socket
+
+
+def connect() -> None:
+    socket.socket()
