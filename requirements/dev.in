@@ -1,0 +1,9 @@
+-c app.txt
+pip-tools
+pytest
+pytest-cov
+hypothesis
+ruff
+mypy
+pip-audit
+pre-commit

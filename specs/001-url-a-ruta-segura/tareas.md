@@ -1,6 +1,6 @@
 # Tareas — Spec 001: De la URL a una ruta segura
 
-- **Estado**: Aprobadas
+- **Estado:** Aprobadas
 - **Fecha**: 2026-11-07
 - **Plan**: [plan.md](plan.md) · **Contrato**: [dominio-001.md](../../docs/03-api/dominio-001.md)
 

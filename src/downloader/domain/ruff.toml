@@ -1,0 +1,18 @@
+# PA-01: el dominio es puro (sin E/S, red, reloj ni aleatoriedad). Ver docs/02-arquitectura/patrones.md
+extend = "../../../pyproject.toml"
+
+[lint.flake8-tidy-imports.banned-api]
+"os".msg = "El dominio no hace E/S (PA-01)."
+"pathlib".msg = "El dominio no hace E/S (PA-01)."
+"io".msg = "El dominio no hace E/S (PA-01)."
+"shutil".msg = "El dominio no hace E/S (PA-01)."
+"socket".msg = "El dominio no usa red (PA-01)."
+"ssl".msg = "El dominio no usa red (PA-01)."
+"urllib".msg = "El dominio usa su propio analizador (ADR 0003)."
+"http".msg = "El dominio no usa red (PA-01)."
+"threading".msg = "El dominio no usa hilos (PA-01)."
+"asyncio".msg = "El dominio no usa asyncio (PA-01)."
+"subprocess".msg = "El dominio no lanza procesos (PA-01)."
+"time".msg = "El dominio no lee el reloj (PA-01)."
+"datetime".msg = "El dominio no lee el reloj (PA-01)."
+"random".msg = "El dominio es determinista (PA-01)."

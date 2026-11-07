@@ -1,6 +1,6 @@
 # Plan técnico — Spec 001: De la URL a una ruta segura
 
-- **Estado**: Aprobado
+- **Estado:** Aprobado
 - **Versión**: 0.1
 - **Fecha**: 2026-11-07
 - **Autor**: arquitecto de software

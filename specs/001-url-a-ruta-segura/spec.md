@@ -1,6 +1,6 @@
 # Spec 001 — De la URL a una ruta segura
 
-- **Estado**: Aprobada
+- **Estado:** Aprobada
 - **Versión**: 0.3 (C1: enmascarado según la autoridad cruda; C2: UTF-32 antes que UTF-16; C3: extensión según Windows para A-1)
 - **Fecha**: 2026-11-07
 - **Autor**: analista de requerimientos
