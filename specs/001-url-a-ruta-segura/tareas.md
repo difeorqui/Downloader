@@ -18,7 +18,7 @@ Convenciones: cada tarea dura **≤ medio día**, se hace en TDD (la prueba indi
 
 | ID | Tarea | Prueba | Depende | Estado |
 |---|---|---|---|---|
-| T-03 | `catalog.py` (I-01..I-09 con textos exactos, F-01..F-99 con clase y texto, A-1..A-3), `result.py`, `text.py` (`windows_fold`, `utf16_len`, recorte) | `test_catalog.py` (conteos y clases según anexo 2), `test_text.py` (`ß`≠`ss`, `Á`=`á`, emoji cuenta 2) | T-02 | [ ] |
+| T-03 | `catalog.py` (I-01..I-09 con textos exactos, F-01..F-99 con clase y texto, A-1..A-3), `result.py`, `text.py` (`windows_fold`, `utf16_len`, recorte) | `test_catalog.py` (conteos y clases según anexo 2), `test_text.py` (`ß`≠`ss`, `Á`=`á`, emoji cuenta 2) | T-02 | [x] |
 | T-04 [P] | `addresses/ipv4.py`: decimal entera, octal, hexadecimal, abreviada, regla "termina en número", desbordes | `test_ipv4.py` (AB-14: `2130706433`, `0177.0.0.1`, `0x7f.1`, `127.1`, inválidas `1.2.3.999`, `0x1g`) | T-03 | [ ] |
 | T-05 [P] | `addresses/lists.py` + `classifier.py`: glosario 2.1/2.2, prevalencia de bloqueada, IPv4 incrustada, nombres (`localhost`, sin punto, sufijos) | `test_classifier.py` (CA-001-90..95 con inicio/medio/fin de cada rango; `fd00:ec2::254`) + `test_tables.py` (conteos) | T-03 (T-04 para notaciones) | [ ] |
 | T-06 [P] | `paths/sanitize.py`: RN-014 a–d y RN-015 | `test_sanitize.py` (CA-001-51..55; cada reservado ×{mayúsculas, extensión, varias extensiones, espacios antes del punto}) | T-03 | [ ] |
