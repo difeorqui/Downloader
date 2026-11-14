@@ -1,6 +1,6 @@
 # Contrato del dominio — spec 001 (URL → ruta segura)
 
-- **Versión**: 0.1 (Borrador, con `specs/001-url-a-ruta-segura/plan.md`) · **Fecha**: 2026-11-07
+- **Versión**: 0.2 (ajustes de implementación, ver «Cambios») · **Fecha**: 2026-11-07
 - Todo es **puro**: sin E/S, sin hilos, sin reloj, determinista. Tipos inmutables (`@dataclass(frozen=True, slots=True)`), colecciones `tuple`/`frozenset`. Ningún método lanza excepciones por entradas del usuario o del servidor: devuelven un resultado con código de catálogo (PA-04). Una excepción es siempre un defecto.
 - `__repr__`/`__str__` de cualquier tipo que contenga una URL devuelve la forma enmascarada (RN-036).
 
@@ -36,7 +36,8 @@ class InvalidUrl:
     reason: InvalidReason
     masked_text: str          # texto original enmascarado de forma conservadora (CA-001-112)
 
-def interpret_url(text: str) -> ParsedUrl | InvalidUrl: ...       # RN-001, RN-001a, RN-003 h, RN-004
+def interpret_url(text: str) -> ParsedUrl | InvalidUrl: ...       # RN-001, RN-001a, RN-003 h, RN-004 (I-06 lo decide validate_batch)
+def parse_url(text: str) -> Result[ParsedUrl, InvalidReason]: ...  # núcleo sin enmascarar
 def mask_text(text: str) -> str: ...                              # enmascarado de texto no analizable
 def dedup_key(url: ParsedUrl) -> str: ...                          # RN-006
 ```
@@ -44,7 +45,7 @@ def dedup_key(url: ParsedUrl) -> str: ...                          # RN-006
 ## 3. Direcciones — `downloader.domain.addresses`
 ```python
 class AddressClass(Enum): PUBLIC; INTERNAL; BLOCKED
-def classify_url_host(url: ParsedUrl) -> AddressClass: ...         # RN-017 a (léxica)
+def classify_host(host: str, ip: IPv4Address | IPv6Address | None = None) -> AddressClass: ...  # RN-017 a (léxica); classify_url_host(url) == classify_host(url.host, url.ip)
 def classify_ip(ip: IPv4Address | IPv6Address) -> AddressClass: ... # glosario 2.1/2.2; la usa también la 002 con IP resueltas
 ```
 
@@ -56,8 +57,11 @@ class SourceLine: number: int; text: str           # ya recortada
 @dataclass(frozen=True, slots=True)
 class BatchFileRejection: kind: RejectionKind; message: str   # texto exacto RN-003 c–g (con valor y límite / línea)
 
-def decode_batch_file(file_name: str, content: bytes) -> tuple[SourceLine, ...] | BatchFileRejection: ...
-def read_single_input(text: str) -> SourceLine | InvalidUrl | None: ...   # None = vacío (CA-001-17); I-08
+@dataclass(frozen=True, slots=True)
+class DecodedBatch: total_lines: int; lines: tuple[SourceLine, ...]    # total_lines = todas las líneas (S-001-09)
+
+def decode_batch_file(file_name: str, content: bytes) -> DecodedBatch | BatchFileRejection: ...
+def read_single_input(text: str) -> SourceLine | InvalidUrl | None: ...   # None = vacío (CA-001-16); I-08 sin texto
 
 @dataclass(frozen=True, slots=True)
 class BatchItem: index: int; line: int; url: ParsedUrl; address_class: AddressClass   # PUBLIC o INTERNAL
@@ -73,12 +77,14 @@ class BatchValidation:
     corrected_encoded: int
     duplicates: int
     invalid: tuple[InvalidLine, ...]
-    internal_hosts: tuple[str, ...]         # orden de primera aparición
-    required_folders: frozenset[str]        # rutas relativas de carpeta, plegadas (RN-012 b)
+    internal_hosts: tuple[InternalHost, ...]  # InternalHost(host, count); sin repetir, orden de primera aparición
+    required_folders: frozenset[str]        # rutas relativas de carpeta, plegadas (RN-012 b), unidas por "\\"
     @property
     def can_start(self) -> bool: ...        # hay al menos un elemento
+    @property
+    def corrected(self) -> int: ...         # elementos corregidos (una sin esquema y codificada cuenta una vez)
 
-def validate_batch(lines: Sequence[SourceLine]) -> BatchValidation: ...   # RN-004..006
+def validate_batch(lines: Sequence[SourceLine], total_lines: int | None = None) -> BatchValidation: ...  # RN-004..006
 ```
 
 ## 5. Rutas — `downloader.domain.paths`
@@ -115,9 +121,11 @@ class TargetPath:
 class PathFailure: code: FailureCode        # F-24 | F-25 | F-27 | F-28
 
 def relative_folders(url: ParsedUrl) -> tuple[str, ...]: ...      # RN-008 (sin respuesta del servidor)
+@dataclass(frozen=True, slots=True)
+class PathEnvironment: disk: KnownDiskEntries; reservations: PathReservations; limits: PathLimits
+
 def compute_target_path(
-    destination: str, url: ParsedUrl, response: ServerResponse | None,
-    disk: KnownDiskEntries, reservations: PathReservations, limits: PathLimits,
+    destination: str, url: ParsedUrl, response: ServerResponse | None, environment: PathEnvironment,
 ) -> TargetPath | PathFailure: ...                                 # RN-008..016; reserva el nombre si es Ok
 
 @dataclass(frozen=True, slots=True)
@@ -138,3 +146,13 @@ def classify_warnings(final_name: str, content_type: str | None) -> frozenset[Wa
 2. Mismas entradas → mismo resultado (RNF-001-04).
 3. Ninguna salida salvo `ParsedUrl.processed()` contiene valores de parámetros, fragmento ni credenciales (CA-001-111).
 4. `interpret_url(url.processed())` devuelve una estructura igual a `url` (salvo `corrections`) — idempotencia del analizador (CA-001-16).
+
+## Cambios respecto a la v0.1 (hallados al implementar; la spec manda sobre el plan)
+- `decode_batch_file` devuelve `DecodedBatch` (con `total_lines`) porque el resumen necesita el total de líneas del archivo, no solo las que tienen contenido (S-001-09).
+- `internal_hosts` lleva el conteo por dominio (S-001-09, CA-001-42).
+- `classify_host(host, ip)` sustituye a `classify_url_host(url)` para que `addresses` no dependa de `urls`; el envoltorio sobre `ParsedUrl` es trivial.
+- Puerto no numérico = I-07 (ejemplo 18c de S-001-08), no I-03 (D-02 corregida).
+- Un carácter de control en la URL (incluido el nulo) = I-03 (CA-001-33); un `%` sin dos cifras hexadecimales se codifica `%25` (S-001-11, CA-001-21).
+- Enmascarado: `?a` → `?***`, `#` vacío se conserva, recorte 199 + `…` (S-001-08; D-09 y D-10 corregidas).
+- `compute_target_path` recibe un `PathEnvironment` (disco, reservas, límites) en lugar de tres argumentos sueltos, para no superar el máximo de argumentos del linter sin desactivarlo.
+- Orden de fallos de ruta según S-001-07: F-28 → F-24/F-27 (de la raíz hacia dentro) → F-25 → guarda de contención. El nombre solo se reserva si el resultado es correcto (D-07 corregida).

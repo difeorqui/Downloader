@@ -60,15 +60,15 @@ No cambian la spec; si el analista discrepa, se ajusta la spec y luego este plan
 | ID | Decisión | Motivo |
 |---|---|---|
 | D-01 | Orden de rechazos del archivo masivo: extensión (d) → tamaño (b) → UTF-16 (e) → UTF-8 (f) → conteo (a) → vacío (g) | Lo más barato y seguro primero; no se decodifica un archivo demasiado grande |
-| D-02 | Puerto vacío (`sitio.com:/a`) = puerto estándar; puerto con caracteres no numéricos = I-03; numérico fuera de 1–65535 = I-07 | I-07 es "fuera de rango"; lo no numérico es mal formado |
+| D-02 | Puerto vacío (`sitio.com:/a`) = puerto estándar; puerto con caracteres no numéricos o numérico fuera de 1–65535 = I-07 (se evalúa después de I-04). **Corregida en la implementación**: la versión anterior decía I-03 para lo no numérico, pero el ejemplo 18c de S-001-08 (spec aprobada) exige I-07 para `user:pass?@evil.com`. Un literal IPv6 con texto ajeno tras `]` sigue siendo I-03 | La spec manda sobre el plan |
 | D-03 | Host: se rechazan con I-03 etiquetas vacías, longitud > 253, y los caracteres prohibidos de WHATWG (espacio, `#`, `%`, `/`, `:`, `<`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `\|`) fuera del literal IPv6; si la última etiqueta es numérica (o `0x…`) se interpreta como IPv4 y si no es válida → I-03; IPv6 con zona (`%`) → I-03 | Analizador único y conservador (AB-20) |
 | D-04 | Decodificación (RN-011): `bytes` → `str` con `surrogateescape`, y cada byte no decodificable se vuelve a escribir como `%XX` (por secuencia, no por segmento entero). Sin registrar manejadores globales de códecs | Puro y sin estado global |
 | D-05 | Detección de `.`/`..` codificados: se decodifica solo `%2e`/`%2E` para la comparación; `%252e` no es punto (ejemplo 39) | RN-008 f + RN-011 |
 | D-06 | "Tiene extensión" = hay un `.` que no es el primer carácter y le sigue al menos un carácter. Sufijo ` (n)` antes de la **última** extensión (`a.tar.gz` → `a.tar (1).gz`) | RN-010 (2), RN-012 a |
-| D-07 | Orden de fallos de ruta: F-24 (unión/enlace en carpeta intermedia) y F-27 (archivo donde va una carpeta), recorriendo de la raíz hacia dentro → sufijo de colisión → F-28 → F-25 → guarda de contención (F-24) | Se mide con el sufijo (CA-001-60) |
+| D-07 | Orden de fallos de ruta: sufijo de colisión → **F-28** → carpetas de la raíz hacia dentro (**F-24** unión/enlace, **F-27** archivo donde va una carpeta) → **F-25** → guarda de contención (F-24). **Corregida en la implementación**: la versión anterior ponía F-24/F-27 antes que F-28; S-001-07 y CA-001-51 a 53 dicen F-28 → F-24 → F-27 → F-25. El nombre solo se reserva si el resultado es correcto | La spec manda sobre el plan; se mide con el sufijo (CA-001-60) |
 | D-08 | El nombre de carpeta de un literal IP usa el host tal como quedó escrito (minúsculas): `2130706433`, `[::1]` → `[__1]`. La clasificación usa el valor interpretado | RN-008 b no pide canonizar; la 002 conecta con el valor interpretado |
-| D-09 | Parámetro sin `=` (`?flag`) se conserva tal cual al enmascarar; con `=` vacío (`?a=`) → `a=***`; fragmento presente (aunque vacío) → `#***` | CA-001-110 (los nombres se conservan) |
-| D-10 | `mask_text` (para inválidas, CA-001-112): si hay `://`, la autoridad hasta el primero de `/ ? #` se enmascara como `***@resto` si contiene `@`; todo lo que sigue al primer `?` se enmascara por valores y lo que sigue al primer `#` como `#***`. Si el texto supera 2 048 caracteres se trunca a 200 + `…` | Conservador ante textos no analizables |
+| D-09 | Enmascarado de URL válida (S-001-08 a): un parámetro sin `=` se trata como valor (`?a` → `?***`); con `=` vacío (`?a=`) → `a=***`; un `?` o `#` sin nada detrás se conserva; fragmento con contenido → `#***`. **Corregida en la implementación**: la versión anterior conservaba `?flag` y ocultaba `#` vacío, contra la tabla de S-001-08 (filas 2, 5 y 6) | La spec manda sobre el plan |
+| D-10 | `mask_text` (S-001-08 b): por cada URL detectada (en I-09, separadas por el espacio previo a `http`), se reemplaza por `***@` desde el inicio de la autoridad cruda hasta su último `@`, y lo que sigue al primer `?` o `#` por `***`. Con I-05 e I-07 los parámetros se muestran por nombre, como en una válida. Toda salida visible se recorta a 199 caracteres + `…` (200). **Corregida**: la versión anterior decía "200 + …" y truncaba solo por encima de 2 048 | La spec manda sobre el plan |
 | D-11 | Unidad de rutas: el dominio trabaja con texto de ruta de Windows (`\`). Destino: se quita la `\` final salvo en la raíz (`D:\`). Para RN-007 c se quitan los prefijos `\\?\` y `\\?\UNC\` y se compara por componentes con `windows_fold` | CA-001-122/123 |
 | D-12 | Coste de colisiones: contador por nombre base en `PathReservations` para que 10 000 nombres iguales no sean O(n²) | RNF-001-02 |
 
@@ -140,3 +140,40 @@ Coordinada con `docs/04-pruebas/estrategia-pruebas.md` (**aún no existe**; lo r
 - **Para la spec 002** (no bloquean la 001): (a) qué ruta se envía al servidor si la URL procesada contiene `.`/`..` (ADR 0003); (b) la 002 debe proteger `PathReservations` con un candado y llamar a `compute_target_path` al recibir la respuesta (RN-012 d); (c) si Windows considera iguales dos nombres que `windows_fold` no (tablas Unicode distintas), la creación exclusiva en disco lo detecta y se vuelve a pedir ruta.
 - `idna` y la normalización NFC dependen de la versión de Unicode de Python; se fija la versión de Python del paquete (ADR 0001).
 - Prerrequisito del flujo: el repositorio **no es git todavía**; ver T-00 en [tareas.md](tareas.md).
+
+## 8 bis. Trazabilidad real (cierre de la spec, T-25)
+
+La tabla de la sección 8 se escribió antes de implementar y varios números de CA no coincidían con los de la spec. Esta es la correspondencia **verificada** con la spec 001 v. aprobada. Los archivos de prueba están en `tests/unit/domain/` salvo indicación.
+
+| Criterios de la spec | Prueba |
+|---|---|
+| CA-001-01 a 09 (esquema, I-01, I-02, I-09, ambigüedad, credenciales, dominio con espacio) | `urls/test_parser.py`, `urls/test_parser_order.py` |
+| CA-001-10, 11, 13, 14, 15 (puerto, largo, punto final, IDN, idempotencia) | `urls/test_parse_url.py`, `urls/test_host.py` |
+| CA-001-12, 16 (campo individual) | `batch/test_single_input.py` |
+| CA-001-17 a 22 (codificación) | `urls/test_encoding.py`, `urls/test_parse_url.py` |
+| CA-001-23 a 34 (archivo masivo) | `batch/test_file_decoder.py` |
+| CA-001-35 a 44 (lote, duplicados, internas) | `batch/test_validator.py`, `urls/test_dedup.py` |
+| CA-001-50 a 53 (contención y orden de fallos) | `paths/test_target.py`, `tests/property/test_properties.py` (P2) |
+| CA-001-54 a 61 (ruta resultante) | `paths/test_relative.py`, `paths/test_target.py` |
+| CA-001-62 (invariantes de toda ruta) | `tests/property/test_properties.py` (P2, oráculo S-001-13) |
+| CA-001-63 a 67 (caracteres y reservados) | `paths/test_sanitize.py` |
+| CA-001-70 a 79 (longitudes) | `paths/test_length.py`, `paths/test_target.py` |
+| CA-001-80 a 87 (nombre y extensión) | `paths/test_filename.py`, `paths/test_content_types.py`, `paths/test_collisions.py` |
+| CA-001-88 a 91 (colisiones) | `paths/test_collisions.py`, `paths/test_target.py`, `tests/regression/test_determinism.py` |
+| CA-001-92 a 97 (direcciones) | `addresses/test_classifier.py`, `addresses/test_ipv4.py`, `addresses/test_tables.py` |
+| CA-001-100 a 106 (avisos, tipos) | `paths/test_warnings.py`, `paths/test_content_types.py` |
+| CA-001-107 a 109 (enmascarado) | `urls/test_masking.py`, `tests/property/test_properties.py` (P4) |
+| CA-001-110 a 112 (carpeta destino) | `paths/test_destination.py` |
+| Ejemplos EJ-01 a EJ-55 | `tests/regression/test_annex1.py` |
+| RNF-001-01 a 03 | `tests/performance/test_performance.py` |
+| RNF-001-04 | `tests/regression/test_determinism.py`, `tests/property/test_properties.py` (P5) |
+| RNF-001-05 | `tests/property/test_properties.py` (P1 a P5, semilla `20261107`) |
+| RNF-001-06 | `tests/architecture/`, gancho de auditoría en `tests/conftest.py` |
+
+### Cambios de diseño respecto al plan original (todos por seguir la spec)
+- **D-02, D-07, D-09 y D-10** corregidas en la sección 4.
+- `compute_target_path` recibe un `PathEnvironment` (disco, reservas, límites).
+- `decode_batch_file` devuelve `DecodedBatch`; `internal_hosts` lleva `InternalHost(host, count)`.
+- `classify_host(host, ip)` sustituye a `classify_url_host(url)`.
+- Defensa añadida por las propiedades: `SourceLine` y `RawUrl` muestran solo su forma enmascarada, y el enmascarado de texto no analizable salta las barras iniciales antes de buscar credenciales (hueco de S-001-08 b).
+- Optimización: una URL cuyo tramo tras la autoridad ya supera 2 048 caracteres es I-04 sin codificarla (RNF-001-03 b).

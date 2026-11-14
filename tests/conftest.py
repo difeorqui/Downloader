@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -38,8 +39,18 @@ settings.load_profile("dev")
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, object, object]:
-    """Activa el gancho solo durante la llamada de las pruebas de las suites protegidas."""
+    """Activa el gancho solo durante la llamada de las pruebas de las suites protegidas.
+
+    Mientras está activo no se escribe bytecode: hypothesis y pytest importan módulos propios de
+    forma diferida dentro de la prueba y, al guardar su ``__pycache__``, el intérprete haría
+    ``os.mkdir``/``os.rename``. Así el gancho se mantiene estricto, sin excepciones.
+    """
     if is_guarded(Path(item.path).resolve(), TESTS_DIR):
-        with GUARD.active():
-            return (yield)
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        try:
+            with GUARD.active():
+                return (yield)
+        finally:
+            sys.dont_write_bytecode = previous
     return (yield)
