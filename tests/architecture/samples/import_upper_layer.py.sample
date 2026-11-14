@@ -1,0 +1,5 @@
+"""Muestra T-02: el dominio no puede depender de capas superiores (PA-01)."""
+
+from downloader.application import ports
+
+__all__ = ["ports"]

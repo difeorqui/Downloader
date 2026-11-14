@@ -1,0 +1,5 @@
+"""Muestra T-02: un import relativo no puede salir del dominio (PA-01)."""
+
+from ...infrastructure import fs
+
+__all__ = ["fs"]

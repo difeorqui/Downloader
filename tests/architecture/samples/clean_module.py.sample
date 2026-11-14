@@ -1,0 +1,31 @@
+"""Muestra T-02: un modulo de dominio correcto no produce ninguna infraccion."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Final
+
+from downloader.domain import catalog
+
+LIMIT: Final = 255
+NAMES: Final = ("con", "prn")
+UNIQUE: Final = frozenset({"a", "b"})
+_PATTERN: Final = re.compile(r"[a-z]+")
+
+
+class Kind(Enum):
+    FILE = 1
+
+
+@dataclass(frozen=True, slots=True)
+class Box:
+    items: tuple[str, ...] = ()
+    extra: frozenset[str] = field(default_factory=frozenset)
+
+
+def build() -> list[str]:
+    local = []
+    local.append(str(catalog))
+    return local

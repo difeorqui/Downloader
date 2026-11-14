@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "downloader"
+version = "0.1.0"
+description = "Descargador masivo para Windows con carpetas derivadas de la URL"
+requires-python = ">=3.13"
+dependencies = ["idna"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+extend-exclude = ["docs", "specs", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "TID", "PL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "PLR0913"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+mypy_path = "src"
+packages = ["downloader"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config -ra"
+pythonpath = ["src"]
+markers = [
+  "perf: pruebas de rendimiento (RNF-001-01..03)",
+  "fuzz: pruebas de propiedades con hypothesis a gran escala",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["downloader"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

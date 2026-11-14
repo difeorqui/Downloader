@@ -1,0 +1,6 @@
+"""Muestra T-02: el dominio no puede abrir archivos (PA-01). NO es codigo de la aplicacion."""
+
+
+def save(path: str) -> None:
+    with open(path, "w") as handle:
+        handle.write("x")
